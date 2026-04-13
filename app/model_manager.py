@@ -54,35 +54,56 @@ class ModelManager:
         """Scan directory for available models"""
         if not os.path.exists(self.weights_dir):
             return
-        
+
         # Find all model files
         model_files = glob.glob(os.path.join(self.weights_dir, "*_model.pth"))
-        
+
         for model_path in model_files:
             name = os.path.basename(model_path).replace("_model.pth", "")
             metrics_path = model_path.replace("_model.pth", "_metrics.json")
-            
+            package_path = model_path.replace("_model.pth", "_package.json")
+
             metrics = {}
+
+            # Try to load metrics from file
             if os.path.exists(metrics_path):
                 with open(metrics_path, 'r') as f:
                     metrics = json.load(f)
-            
+            elif os.path.exists(package_path):
+                with open(package_path, 'r') as f:
+                    package = json.load(f)
+                    metrics = package.get('metrics', {})
+
             # Load checkpoint to get info
             try:
                 checkpoint = torch.load(model_path, map_location='cpu')
                 backbone = checkpoint.get('backbone_name', 'unknown')
                 backbone_dim = checkpoint.get('backbone_dim', 768)
-                
+
+                # Try to get metrics from checkpoint if not found in files
+                if not metrics and 'metrics' in checkpoint:
+                    metrics = checkpoint.get('metrics', {})
+
+                # Get timestamp from checkpoint if available
+                timestamp = None
+                if 'timestamp' in checkpoint:
+                    timestamp = checkpoint['timestamp']
+                elif os.path.exists(package_path):
+                    with open(package_path, 'r') as f:
+                        package = json.load(f)
+                        timestamp = package.get('saved_at')
+
                 self.models[name] = ModelInfo(
                     name=name,
                     backbone=backbone,
                     backbone_dim=backbone_dim,
                     path=model_path,
-                    metrics=metrics
+                    metrics=metrics,
+                    timestamp=timestamp
                 )
             except Exception as e:
                 print(f"Error loading model info for {name}: {e}")
-        
+
         # Check for best model designation
         best_model_file = os.path.join(self.weights_dir, "best_model.json")
         if os.path.exists(best_model_file):
@@ -91,7 +112,7 @@ class ModelManager:
                 best_name = best_info.get('best_backbone', '')
                 if best_name in self.models:
                     self.models[best_name].is_best = True
-        
+
         print(f"Found {len(self.models)} models:")
         for name, info in self.models.items():
             best_marker = " (BEST)" if info.is_best else ""

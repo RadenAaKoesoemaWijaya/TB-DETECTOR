@@ -58,6 +58,8 @@ function goToSection(section) {
         startStatusPolling();
     } else if (section === 'train') {
         startStatusPolling();
+    } else if (section === 'predict') {
+        refreshModelList();
     }
 }
 
@@ -234,27 +236,74 @@ async function loadTrainingResults() {
     try {
         const response = await fetch(`${API_URL}/training/results`);
         const data = await response.json();
-        
+
         if (data.training_completed && data.models.length > 0) {
             trainingCompleted = true;
-            
+
             // Show chart
             const chartImg = document.getElementById('comparisonChart');
             const noChartMsg = document.getElementById('noChartMessage');
-            
+
             chartImg.src = `${API_URL}/training/visualization?t=${Date.now()}`;
             chartImg.style.display = 'block';
             noChartMsg.style.display = 'none';
-            
+
             // Render model cards
             renderModelCards(data.results);
+
+            // Generate download buttons
+            generateDownloadButtons(data.results);
         } else {
-            document.getElementById('noChartMessage').textContent = 
+            document.getElementById('noChartMessage').textContent =
                 'Training belum selesai atau tidak ada model yang dilatih.';
         }
-        
+
     } catch (err) {
         console.error('Error loading results:', err);
+    }
+}
+
+function generateDownloadButtons(results) {
+    const container = document.getElementById('downloadButtons');
+    container.innerHTML = '';
+
+    Object.keys(results).forEach(modelName => {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-secondary';
+        btn.style.padding = '10px 20px';
+        btn.style.fontSize = '0.9rem';
+        btn.innerHTML = `📥 ${formatModelName(modelName)}`;
+        btn.onclick = () => downloadModel(modelName);
+        container.appendChild(btn);
+    });
+}
+
+async function downloadModel(modelName) {
+    try {
+        showLoading('Mempersiapkan download...');
+
+        const response = await fetch(`${API_URL}/models/download/${modelName}`);
+
+        if (!response.ok) {
+            throw new Error('Download failed');
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${modelName}_tb_model.zip`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        hideLoading();
+        showAlert('resultsAlert', `Model ${formatModelName(modelName)} berhasil didownload!`, 'success');
+
+    } catch (err) {
+        hideLoading();
+        showAlert('resultsAlert', 'Error download: ' + err.message, 'error');
     }
 }
 
@@ -347,12 +396,139 @@ async function saveBestModel() {
     }
 }
 
+// ========== MODEL UPLOAD & SELECTION ==========
+
+async function refreshModelList() {
+    try {
+        const response = await fetch(`${API_URL}/models/list`);
+        const data = await response.json();
+
+        const select = document.getElementById('modelSelect');
+        select.innerHTML = '<option value="">-- Pilih Model --</option>';
+
+        if (data.success && data.models.length > 0) {
+            data.models.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model.name;
+                const auroc = model.metrics?.auroc ? (model.metrics.auroc * 100).toFixed(1) + '%' : 'N/A';
+                option.textContent = `${formatModelName(model.name)} (AUROC: ${auroc})${model.is_best ? ' ⭐' : ''}`;
+                select.appendChild(option);
+            });
+
+            // Auto-select best model or first model
+            const bestModel = data.models.find(m => m.is_best);
+            if (bestModel) {
+                select.value = bestModel.name;
+                await loadSelectedModel(bestModel.name);
+            } else if (data.models.length > 0) {
+                select.value = data.models[0].name;
+                await loadSelectedModel(data.models[0].name);
+            }
+        } else {
+            const option = document.createElement('option');
+            option.value = "";
+            option.textContent = "Tidak ada model tersedia - Upload model baru";
+            select.appendChild(option);
+        }
+    } catch (err) {
+        console.error('Error refreshing model list:', err);
+        showAlert('predictAlert', 'Gagal memuat daftar model', 'error');
+    }
+}
+
+async function loadSelectedModel(modelName) {
+    if (!modelName) return;
+
+    try {
+        const formData = new FormData();
+        formData.append('model_name', modelName);
+
+        const response = await fetch(`${API_URL}/models/load`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            const info = result.model_info;
+            document.getElementById('currentModelInfo').style.display = 'block';
+            document.getElementById('activeModelName').textContent = formatModelName(info.name);
+            document.getElementById('activeModelBackbone').textContent = info.backbone;
+            document.getElementById('activeModelAuroc').textContent = info.metrics?.auroc ?
+                (info.metrics.auroc * 100).toFixed(1) + '%' : 'N/A';
+        }
+    } catch (err) {
+        console.error('Error loading model:', err);
+    }
+}
+
+// Listen for model selection change
+document.addEventListener('DOMContentLoaded', () => {
+    const modelSelect = document.getElementById('modelSelect');
+    if (modelSelect) {
+        modelSelect.addEventListener('change', (e) => {
+            if (e.target.value) {
+                loadSelectedModel(e.target.value);
+            }
+        });
+    }
+});
+
+async function handleModelUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.zip')) {
+        showAlert('predictAlert', 'File harus berformat ZIP', 'error');
+        return;
+    }
+
+    document.getElementById('uploadedModelName').textContent = file.name;
+
+    showLoading('Mengupload dan mengimport model...');
+
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch(`${API_URL}/models/upload`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        hideLoading();
+
+        if (result.success) {
+            showAlert('predictAlert', `Model ${result.model_name} berhasil diupload!`, 'success');
+            // Refresh model list and select the new model
+            await refreshModelList();
+
+            // Select the newly uploaded model
+            const select = document.getElementById('modelSelect');
+            select.value = result.model_name;
+            await loadSelectedModel(result.model_name);
+
+            document.getElementById('uploadedModelName').textContent = '';
+            document.getElementById('modelUpload').value = '';
+        } else {
+            showAlert('predictAlert', 'Upload gagal: ' + (result.message || 'Unknown error'), 'error');
+        }
+
+    } catch (err) {
+        hideLoading();
+        showAlert('predictAlert', 'Error upload: ' + err.message, 'error');
+    }
+}
+
 // ========== PREDICTION ==========
 
 function handlePredictionAudio(event) {
     const file = event.target.files[0];
     if (!file) return;
-    
+
     predictionAudio = file;
     document.getElementById('predAudioName').textContent = file.name;
 }
@@ -362,9 +538,16 @@ async function runPrediction() {
         showAlert('predictAlert', 'Upload audio batuk terlebih dahulu!', 'warning');
         return;
     }
-    
+
+    // Check if a model is selected
+    const selectedModel = document.getElementById('modelSelect').value;
+    if (!selectedModel) {
+        showAlert('predictAlert', 'Pilih atau upload model terlebih dahulu!', 'warning');
+        return;
+    }
+
     showLoading('Menganalisis...');
-    
+
     try {
         const formData = new FormData();
         formData.append('audio', predictionAudio);
@@ -378,7 +561,8 @@ async function runPrediction() {
         formData.append('has_chest_pain', document.getElementById('predChestPain').checked);
         formData.append('has_shortness_breath', document.getElementById('predShortness').checked);
         formData.append('previous_tb_history', document.getElementById('predPrevTB').checked);
-        
+        formData.append('model_name', selectedModel);
+
         const response = await fetch(`${API_URL}/predict`, {
             method: 'POST',
             body: formData

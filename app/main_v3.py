@@ -20,7 +20,7 @@ import torch
 import torch.nn.functional as F
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 import soundfile as sf
@@ -813,13 +813,13 @@ async def save_model(request: SaveModelRequest):
     """Save trained model dengan metadata"""
     try:
         model_name = request.model_name
-        
+
         # Check if model exists in training results
         if model_name not in global_state['training_results']:
             raise HTTPException(status_code=404, detail=f"Model {model_name} tidak ditemukan dalam hasil training")
-        
+
         result = global_state['training_results'][model_name]
-        
+
         # Create model package
         model_package = {
             'model_name': model_name,
@@ -830,14 +830,14 @@ async def save_model(request: SaveModelRequest):
             'saved_at': datetime.now().isoformat(),
             'config': result.get('config', {})
         }
-        
+
         # Save metadata
         package_path = f"app/models/weights/{model_name}_package.json"
         with open(package_path, 'w') as f:
             json.dump(model_package, f, indent=2)
-        
+
         log_message(f"Model {model_name} saved with metadata")
-        
+
         return {
             "success": True,
             "message": f"Model {model_name} berhasil disimpan",
@@ -845,7 +845,165 @@ async def save_model(request: SaveModelRequest):
             "metadata_path": package_path,
             "metrics": result['metrics']
         }
-        
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/models/download/{model_name}")
+async def download_model(model_name: str):
+    """Download trained model as a packaged file"""
+    try:
+        # Check if model exists
+        model_path = f"app/models/weights/{model_name}_model.pth"
+        metadata_path = f"app/models/weights/{model_name}_package.json"
+
+        if not os.path.exists(model_path):
+            raise HTTPException(status_code=404, detail=f"Model {model_name} tidak ditemukan")
+
+        # Create a temporary ZIP file containing model and metadata
+        import tempfile
+        zip_path = os.path.join(tempfile.gettempdir(), f"{model_name}_tb_model.zip")
+
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+            # Add model weights
+            zf.write(model_path, f"{model_name}_model.pth")
+            # Add metadata if exists
+            if os.path.exists(metadata_path):
+                zf.write(metadata_path, f"{model_name}_metadata.json")
+
+        log_message(f"Model {model_name} packaged for download")
+
+        return FileResponse(
+            zip_path,
+            media_type='application/zip',
+            filename=f"{model_name}_tb_model.zip"
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/models/upload")
+async def upload_model(
+    file: UploadFile = File(..., description="ZIP file containing model files (.pth and optional .json)")
+):
+    """Upload and import a trained model"""
+    try:
+        log_message(f"Received model upload: {file.filename}")
+
+        # Validate ZIP
+        if not file.filename.endswith('.zip'):
+            raise HTTPException(status_code=400, detail="File harus berformat ZIP")
+
+        # Read uploaded file
+        content = await file.read()
+
+        # Create temp directory
+        temp_dir = tempfile.mkdtemp(prefix="model_upload_")
+        zip_path = os.path.join(temp_dir, "model.zip")
+
+        with open(zip_path, 'wb') as f:
+            f.write(content)
+
+        # Extract ZIP
+        extract_dir = os.path.join(temp_dir, "extracted")
+        os.makedirs(extract_dir, exist_ok=True)
+
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(extract_dir)
+
+        # Find model file and metadata
+        model_file = None
+        metadata_file = None
+
+        for root, dirs, files in os.walk(extract_dir):
+            for f in files:
+                if f.endswith('_model.pth'):
+                    model_file = os.path.join(root, f)
+                elif f.endswith('_metadata.json') or f.endswith('_package.json'):
+                    metadata_file = os.path.join(root, f)
+
+        if not model_file:
+            shutil.rmtree(temp_dir)
+            raise HTTPException(status_code=400, detail="File model .pth tidak ditemukan dalam ZIP")
+
+        # Get model name from filename
+        model_name = os.path.basename(model_file).replace('_model.pth', '')
+
+        # Copy to weights directory
+        weights_dir = "app/models/weights"
+        os.makedirs(weights_dir, exist_ok=True)
+
+        dest_model_path = os.path.join(weights_dir, f"{model_name}_model.pth")
+        shutil.copy2(model_file, dest_model_path)
+
+        if metadata_file:
+            dest_metadata_path = os.path.join(weights_dir, f"{model_name}_package.json")
+            shutil.copy2(metadata_file, dest_metadata_path)
+
+        # Reload model manager
+        manager = get_model_manager()
+        manager._scan_models()
+
+        # Cleanup temp
+        shutil.rmtree(temp_dir)
+
+        log_message(f"Model {model_name} uploaded and imported successfully")
+
+        return {
+            "success": True,
+            "message": f"Model {model_name} berhasil diupload dan diimport",
+            "model_name": model_name,
+            "model_path": dest_model_path
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        log_message(f"Error uploading model: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============== MODEL MANAGEMENT ==============
+
+@app.get("/models/list")
+async def list_models():
+    """List all available trained models"""
+    try:
+        manager = get_model_manager()
+        models = manager.list_models()
+
+        return {
+            "success": True,
+            "models": models,
+            "total": len(models),
+            "current_model": manager.current_model
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/models/load")
+async def load_model_endpoint(model_name: str = Form(...)):
+    """Load a specific model for prediction"""
+    try:
+        manager = get_model_manager()
+        success = manager.load_model(model_name)
+
+        if success:
+            return {
+                "success": True,
+                "message": f"Model {model_name} berhasil dimuat",
+                "model_info": manager.get_current_model_info()
+            }
+        else:
+            raise HTTPException(status_code=404, detail=f"Gagal memuat model {model_name}")
+
     except HTTPException:
         raise
     except Exception as e:
