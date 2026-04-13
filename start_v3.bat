@@ -44,6 +44,8 @@ echo.
 echo Press Ctrl+C to stop the server
 echo.
 
+call venv\Scripts\activate.bat
+
 python -m uvicorn app.main_v3:app --host 0.0.0.0 --port 8000 --reload
 
 pause
