@@ -1,0 +1,54 @@
+@echo off
+chcp 65001 >nul
+echo ===========================================
+echo   TB DETECTOR - Fix Dependencies
+echo ===========================================
+echo.
+
+echo [1/4] Removing old virtual environment...
+if exist venv (
+    rmdir /s /q venv
+    echo   [OK] Old venv removed
+) else (
+    echo   [INFO] No venv to remove
+)
+echo.
+
+echo [2/4] Creating fresh virtual environment...
+python -m venv venv
+if errorlevel 1 (
+    echo   [ERROR] Failed to create venv!
+    pause
+    exit /b 1
+)
+echo   [OK] Virtual environment created
+echo.
+
+echo [3/4] Activating and upgrading pip...
+call venv\Scripts\activate.bat
+python -m pip install --upgrade pip
+echo   [OK] Pip upgraded
+echo.
+
+echo [4/4] Installing dependencies (this may take a few minutes)...
+echo   Installing torch 2.6.0 + torchaudio 2.6.0...
+pip install torch==2.6.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+
+echo   Installing other packages...
+pip install fastapi==0.104.1 uvicorn==0.24.0 python-multipart==0.0.6 transformers==4.35.2 librosa==0.10.1 numpy==1.24.3 scikit-learn==1.3.2 pandas==2.0.3 pydantic==2.5.0 soundfile==0.12.1 onnx==1.15.0 onnxruntime==1.16.3 pydub==0.25.1 webrtcvad==2.0.10 matplotlib==3.8.2 seaborn==0.13.0 tensorboard==2.15.1 tqdm==4.66.1 requests==2.31.0 pillow==10.1.0
+
+if errorlevel 1 (
+    echo   [WARNING] Some packages may have issues
+) else (
+    echo   [OK] All dependencies installed
+)
+echo.
+
+echo ===========================================
+echo   Dependencies Fixed!
+echo ===========================================
+echo.
+echo You can now run the server with:
+echo   .\start_v3.bat
+echo.
+pause
