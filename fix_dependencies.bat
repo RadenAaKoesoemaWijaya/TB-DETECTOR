@@ -89,7 +89,7 @@ if errorlevel 1 (
 )
 
 echo   Installing other packages...
-pip install fastapi uvicorn python-multipart transformers librosa scikit-learn pandas pydantic soundfile onnx onnxruntime pydub matplotlib seaborn tensorboard tqdm requests pillow
+pip install fastapi uvicorn python-multipart transformers librosa scikit-learn pandas pydantic soundfile onnx onnxruntime pydub webrtcvad-wheels matplotlib seaborn tensorboard tqdm requests pillow
 
 if errorlevel 1 (
     echo   [WARNING] Some packages may have issues

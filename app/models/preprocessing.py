@@ -7,8 +7,15 @@ import numpy as np
 import librosa
 import torch
 from typing import List, Tuple
-import webrtcvad
 import collections
+
+# webrtcvad dengan fallback
+try:
+    import webrtcvad
+    WEBRTCVAD_AVAILABLE = True
+except ImportError:
+    WEBRTCVAD_AVAILABLE = False
+    print("[WARNING] webrtcvad not available, using energy-based VAD fallback")
 
 
 class AudioPreprocessor:
@@ -64,7 +71,10 @@ class CoughSegmenter:
         self.frame_size = int(sample_rate * frame_duration_ms / 1000)
         
         # WebRTC VAD (expects 16kHz, 30ms frames)
-        self.vad = webrtcvad.Vad(2)  # Aggressiveness 0-3, higher = more aggressive filtering
+        if WEBRTCVAD_AVAILABLE:
+            self.vad = webrtcvad.Vad(2)  # Aggressiveness 0-3, higher = more aggressive filtering
+        else:
+            self.vad = None
         
         # Energy threshold for cough detection
         self.energy_threshold = 0.01
@@ -85,21 +95,26 @@ class CoughSegmenter:
     
     def is_cough_candidate(self, frame: np.ndarray) -> bool:
         """Determine if frame is a cough candidate"""
-        # Convert to bytes for VAD
-        frame_bytes = (frame * 32767).astype(np.int16).tobytes()
-        
-        # Check VAD
-        try:
-            is_speech = self.vad.is_speech(frame_bytes, self.sample_rate)
-        except:
-            is_speech = False
-        
         # Check energy
         energy = self.compute_frame_energy(frame)
         is_high_energy = energy > self.energy_threshold
         
-        # Cough typically has high energy and is speech-like
-        return is_speech and is_high_energy
+        if WEBRTCVAD_AVAILABLE and self.vad is not None:
+            # Convert to bytes for VAD
+            frame_bytes = (frame * 32767).astype(np.int16).tobytes()
+            
+            # Check VAD
+            try:
+                is_speech = self.vad.is_speech(frame_bytes, self.sample_rate)
+            except:
+                is_speech = False
+            
+            # Cough typically has high energy and is speech-like
+            return is_speech and is_high_energy
+        else:
+            # Fallback: energy-based only
+            # Cough has high energy and sharp attack
+            return is_high_energy
     
     def segment(self, waveform: np.ndarray) -> List[Tuple[int, int]]:
         """
