@@ -16,6 +16,7 @@ def test_basic_imports():
         import fastapi
         import librosa
         import matplotlib
+        import aiofiles  # Phase 2 async I/O
         print("✓ Basic dependencies OK")
         return True
     except ImportError as e:

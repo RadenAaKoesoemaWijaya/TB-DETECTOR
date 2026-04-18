@@ -51,7 +51,7 @@ echo.
 
 REM Install packages one by one untuk better error handling
 echo   - Installing core dependencies...
-pip install fastapi uvicorn python-multipart pydantic tqdm requests pillow
+pip install fastapi uvicorn python-multipart pydantic tqdm requests pillow aiofiles
 
 echo   - Installing ML libraries (PyTorch)...
 pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
