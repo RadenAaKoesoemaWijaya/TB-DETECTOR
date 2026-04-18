@@ -91,13 +91,38 @@ cough_001.wav,P001,35,L,1,14,1,...
 
 2. **Install Python (jika belum):**
    - Download dari https://www.python.org/downloads/
-   - Pilih Python **3.10, 3.11, atau 3.12**
+   - Pilih Python **3.10, 3.11, atau 3.12** (recommended)
    - **Centang "Add Python to PATH"** saat installasi
    - Restart terminal setelah install
 
 3. **Gunakan py launcher (alternatif):**
    - Ganti semua `python` dengan `py` di batch files
    - Atau jalankan: `py -m venv venv`
+
+### Python 3.14 Compatibility Issues
+
+**Problem:** `Could not find a version that satisfies the requirement torch==2.6.0`
+
+**Cause:** Python 3.14 terlalu baru, beberapa packages belum ada pre-built wheels.
+
+**Solutions:**
+
+1. **Gunakan Quick Install (recommended untuk Python 3.14):**
+   ```batch
+   rmdir /s /q venv  :: Hapus venv yang corrupted
+   .\quick_install.bat
+   ```
+
+2. **Atau downgrade ke Python 3.11/3.12:**
+   - Uninstall Python 3.14
+   - Install Python 3.11 atau 3.12 dari python.org
+   - Jalankan ulang `fix_dependencies.bat`
+
+3. **Manual install dengan versions fleksibel:**
+   ```batch
+   pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+   pip install fastapi uvicorn transformers librosa numpy pandas
+   ```
 
 ### Other Issues
 

@@ -66,14 +66,30 @@ echo   [OK] Pip upgraded
 echo.
 
 echo [4/4] Installing dependencies (this may take a few minutes)...
-echo   Upgrading setuptools first (for Python 3.13 compatibility)...
+echo   Upgrading setuptools first...
 pip install --upgrade setuptools wheel
 
-echo   Installing torch 2.6.0 + torchaudio 2.6.0...
-pip install torch==2.6.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+REM Check Python version untuk torch compatibility
+for /f "tokens=2" %%I in ('%PYTHON_CMD% --version 2^>^&1') do set PYVER=%%I
+echo   Detected Python version: %PYVER%
+
+echo   Installing torch + torchaudio...
+REM For Python 3.14, gunakan torch 2.10+ atau latest available
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+if errorlevel 1 (
+    echo   [WARNING] Failed to install torch from index, trying default...
+    pip install torch torchaudio
+)
+
+echo   Installing numpy (pre-built wheel untuk avoid compilation)...
+pip install numpy --only-binary :all:
+if errorlevel 1 (
+    echo   [WARNING] Trying numpy without binary restriction...
+    pip install numpy
+)
 
 echo   Installing other packages...
-pip install fastapi==0.104.1 uvicorn==0.24.0 python-multipart==0.0.6 transformers==4.35.2 librosa==0.10.1 numpy==1.26.4 scikit-learn==1.3.2 pandas==2.0.3 pydantic==2.5.0 soundfile==0.12.1 onnx==1.15.0 onnxruntime==1.16.3 pydub==0.25.1 webrtcvad==2.0.10 matplotlib==3.8.2 seaborn==0.13.0 tensorboard==2.15.1 tqdm==4.66.1 requests==2.31.0 pillow==10.1.0
+pip install fastapi uvicorn python-multipart transformers librosa scikit-learn pandas pydantic soundfile onnx onnxruntime pydub matplotlib seaborn tensorboard tqdm requests pillow
 
 if errorlevel 1 (
     echo   [WARNING] Some packages may have issues
