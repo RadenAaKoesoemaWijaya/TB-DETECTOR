@@ -24,14 +24,26 @@ API Documentation: **http://localhost:8000/docs**
 
 ## 📋 Requirements
 
-- **Python:** 3.9 - 3.13
+- **Python:** 3.9 - 3.14 (3.10-3.12 recommended)
 - **RAM:** 4GB minimum (8GB recommended for training)
 - **OS:** Windows 10/11 / Linux / macOS
 - **Disk:** 2GB untuk models dan cache
 
 ### Key Dependencies
 ```
-torch==2.6.0 | fastapi==0.104.1 | transformers==4.35.2 | onnxruntime>=1.16.0
+torch>=2.10.0 | fastapi>=0.104.0 | transformers>=4.35.0 | onnxruntime>=1.16.0
+```
+
+### Installation Methods
+
+**Standard Install (Python 3.10-3.12):**
+```bash
+.\fix_dependencies.bat
+```
+
+**Quick Install (Python 3.14 compatible):**
+```bash
+.\quick_install.bat
 ```
 
 ---
@@ -225,7 +237,9 @@ TB-DETECTOR/
 ├── train_multi_backbone.py          # Standalone training
 ├── export_onnx.py                   # ONNX export utility
 ├── start_v3.bat                     # Windows launcher
-├── fix_dependencies.bat             # Dependency fixer
+├── fix_dependencies.bat             # Dependency fixer (standard)
+├── quick_install.bat                # Quick install (Python 3.14 compatible)
+├── check_python.bat                 # Check Python installation
 └── README.md                        # This file
 ```
 
@@ -238,11 +252,14 @@ TB-DETECTOR/
 
 ## 🧪 Testing
 
-### Unit Tests
+### Build Test
 ```bash
-# Test API endpoints
-python test_api.py
+# Test all imports
+python test_build.py
+```
 
+### Manual Test
+```bash
 # Test model loading
 python -c "from app.model_manager import get_model_manager; print('OK')"
 ```
@@ -277,4 +294,4 @@ python -c "from app.model_manager import get_model_manager; print('OK')"
 ---
 
 **TB DETECTOR v3** - Production-ready TB Detection System | Integrated AI Pipeline
-**Version:** 3.0.0 | **Status:** Stable | **Last Updated:** 2024
+**Version:** 3.2.0 | **Status:** Stable | **Last Updated:** April 2026
