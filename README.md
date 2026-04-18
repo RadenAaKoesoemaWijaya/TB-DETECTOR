@@ -1,4 +1,4 @@
-# TB DETECTOR v3 - Integrated AI Pipeline
+# TB DETECTOR v3.2 - Integrated AI Pipeline
 
 > **TB Detection via Audio Recognition** - Alur lengkap: Upload → Preprocess → Train → Visualize → Predict
 
@@ -18,28 +18,44 @@
 ### 3. Open Browser
 **http://localhost:8000**
 
+API Documentation: **http://localhost:8000/docs**
+
 ---
 
 ## 📋 Requirements
 
 - **Python:** 3.9 - 3.13
-- **RAM:** 4GB minimum (8GB recommended)
+- **RAM:** 4GB minimum (8GB recommended for training)
 - **OS:** Windows 10/11 / Linux / macOS
+- **Disk:** 2GB untuk models dan cache
 
 ### Key Dependencies
 ```
-torch==2.6.0 | fastapi==0.104.1 | transformers==4.35.2
+torch==2.6.0 | fastapi==0.104.1 | transformers==4.35.2 | onnxruntime>=1.16.0
 ```
 
 ---
 
 ## 🎯 Features
 
+### Core Pipeline (v3.0)
 - **Integrated Pipeline:** 5-step workflow (Upload → Preprocess → Train → Results → Predict)
 - **Multi-Backbone:** HeAR, Wav2Vec 2.0, XLS-R, HuBERT
 - **Real-time Training:** Live logs and visualization
 - **Model Management:** Save, compare, and load models
 - **Interactive UI:** Drag & drop, charts, model cards
+
+### Phase 1: Performance Optimizations
+- **Batch Training:** 10-20x faster training dengan DataLoader (batch_size up to 64)
+- **Feature Caching:** Persistent cache untuk pre-extracted features
+- **SQLite Persistence:** State durability dan history tracking
+
+### Phase 2: Production Features
+- **Async I/O:** Non-blocking file operations dan preprocessing
+- **Task Queue:** Background job scheduling dengan priority
+- **ONNX Inference:** 2-3x faster inference dengan ONNX Runtime
+- **Model Versioning:** Dev → Staging → Production workflow
+- **A/B Testing:** Statistical model comparison dengan traffic allocation
 
 ---
 
@@ -62,29 +78,138 @@ cough_001.wav,P001,35,L,1,14,1,...
 
 ## 🔧 Troubleshooting
 
+### Python Not Found / Build Errors
+
+**Problem:** `The system cannot find the file python.exe`
+
+**Solutions:**
+
+1. **Check Python Installation:**
+   ```batch
+   .\check_python.bat
+   ```
+
+2. **Install Python (jika belum):**
+   - Download dari https://www.python.org/downloads/
+   - Pilih Python **3.10, 3.11, atau 3.12**
+   - **Centang "Add Python to PATH"** saat installasi
+   - Restart terminal setelah install
+
+3. **Gunakan py launcher (alternatif):**
+   - Ganti semua `python` dengan `py` di batch files
+   - Atau jalankan: `py -m venv venv`
+
+### Other Issues
+
 | Issue | Solution |
 |-------|----------|
 | `torch not found` | Run `.\fix_dependencies.bat` |
 | `uvicorn error` | Delete `venv/` folder, run fix script |
 | PowerShell error | Use `.\script.bat` (with `.\`) |
+| `ImportError: cannot import name 'ONNX_AVAILABLE'` | Install ONNX: `pip install onnx onnxruntime` |
+| SQLite locked | Restart server, check `data/pipeline.db` permissions |
+| Cache corrupted | Delete `data/feature_cache/` folder |
 
 ---
 
-## 🧹 Cleanup Complete
+## 📚 API Endpoints
 
-✅ All v1/v2 files removed. Only v3 remains:
-- `app/main_v3.py` - Backend
-- `app/static/index_v3.html` - UI
-- `train_multi_backbone.py` - Training
-
----
-
-**TB DETECTOR v3.0.1** | Python 3.9+ | [http://localhost:8000](http://localhost:8000)
-├── train_multi_backbone.py ✅ Training
-├── export_onnx.py         ✅ Export utility
-├── start_v3.bat          ✅ Launcher
-└── README_v3.md          ✅ Dokumentasi ini
+### Dataset & Preprocessing
 ```
+POST   /dataset/upload              # Upload dataset ZIP
+POST   /dataset/preprocess          # Start preprocessing
+```
+
+### Training
+```
+POST   /training/start              # Start training
+GET    /training/results            # Get training results
+GET    /training/visualization      # Get comparison chart
+```
+
+### Phase 1: Persistence
+```
+GET    /persistence/logs             # Get persistent logs
+GET    /persistence/state            # Get pipeline state
+GET    /persistence/training-sessions
+GET    /persistence/cache-stats     # Feature cache statistics
+```
+
+### Phase 2: Task Queue
+```
+GET    /tasks/queue                 # Queue status
+GET    /tasks/list                  # List background tasks
+GET    /tasks/{task_id}             # Task details
+```
+
+### Phase 2: Model Registry
+```
+GET    /registry/models             # List model versions
+POST   /registry/models/{name}/{version}/promote  # Promote stage
+GET    /registry/statistics          # Registry stats
+```
+
+### Phase 2: ONNX
+```
+POST   /models/export-onnx/{name}   # Export to ONNX
+GET    /onnx/benchmark/{name}       # Benchmark ONNX model
+```
+
+### Phase 2: A/B Testing
+```
+POST   /experiments/create           # Create experiment
+POST   /experiments/{id}/start       # Start experiment
+POST   /experiments/{id}/stop        # Stop & get results
+GET    /experiments/list             # List experiments
+```
+
+### Prediction
+```
+POST   /predict                      # Make prediction
+```
+
+---
+
+## 🧹 Project Structure
+
+```
+TB-DETECTOR/
+├── app/
+│   ├── main_v3.py                 # FastAPI backend (updated v3.2)
+│   ├── model_manager.py             # Model management
+│   ├── persistence.py               # SQLite persistence
+│   ├── async_utils.py               # Async I/O (Phase 2)
+│   ├── task_queue.py                # Background tasks (Phase 2)
+│   ├── onnx_inference.py            # ONNX Runtime (Phase 2)
+│   ├── model_versioning.py          # Model registry (Phase 2)
+│   ├── ab_testing.py                # A/B testing (Phase 2)
+│   ├── training/
+│   │   ├── batch_trainer.py         # Batch training (Phase 1)
+│   │   └── cache_manager.py         # Feature caching (Phase 1)
+│   ├── models/
+│   │   ├── backbones.py             # HeAR, Wav2Vec2, XLS-R, HuBERT
+│   │   ├── classifier.py            # MLP + Transformer
+│   │   └── preprocessing.py         # Audio preprocessing
+│   └── utils/
+│       ├── feature_fusion.py        # Audio + metadata fusion
+│       └── metadata_encoder.py      # Clinical metadata encoding
+├── data/
+│   ├── feature_cache/               # Extracted features cache
+│   ├── experiments/                 # A/B testing data
+│   └── pipeline.db                  # SQLite database
+├── train_multi_backbone.py          # Standalone training
+├── export_onnx.py                   # ONNX export utility
+├── start_v3.bat                     # Windows launcher
+├── fix_dependencies.bat             # Dependency fixer
+└── README.md                        # This file
+```
+
+---
+
+**TB DETECTOR v3.2.0** | Python 3.9+ | [http://localhost:8000](http://localhost:8000)
+├── Phase 1: ✅ Performance (Batch Training, Caching, Persistence)
+├── Phase 2: ✅ Production (Async, Task Queue, ONNX, Versioning, A/B Testing)
+└── API Docs: /docs (auto-generated)
 
 ## 🧪 Testing
 
