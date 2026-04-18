@@ -2,12 +2,24 @@
 
 > **TB Detection via Audio Recognition** - Alur lengkap: Upload → Preprocess → Train → Visualize → Predict
 
-## ⚡ Quick Start
+[![Python](https://img.shields.io/badge/Python-3.9%20|%203.10%20|%203.11%20|%203.12%20|%203.13%20|%203.14-blue)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.136.0-green)](https://fastapi.tiangolo.com/)
+[![Status](https://img.shields.io/badge/Status-Stable-brightgreen)]()
+[![Phase](https://img.shields.io/badge/Phase-2%20Complete-orange)]()
+
+---
+
+## ⚡ Quick Start (3 Langkah)
 
 ### 1. Install Dependencies
 ```bash
-# Windows
+# Windows - Pilih salah satu sesuai Python version:
+
+# Python 3.10-3.12 (Recommended - Paling Stabil)
 .\fix_dependencies.bat
+
+# Python 3.13-3.14 (Jika Python versi terbaru)
+.\quick_install.bat
 ```
 
 ### 2. Run Server
@@ -16,58 +28,69 @@
 ```
 
 ### 3. Open Browser
-**http://localhost:8000**
+**[http://localhost:8000](http://localhost:8000)**
 
-API Documentation: **http://localhost:8000/docs**
+API Docs: **[http://localhost:8000/docs](http://localhost:8000/docs)**
 
 ---
 
-## 📋 Requirements
+## 📋 Requirements & Installation
 
-- **Python:** 3.9 - 3.14 (3.10-3.12 recommended)
-- **RAM:** 4GB minimum (8GB recommended for training)
-- **OS:** Windows 10/11 / Linux / macOS
-- **Disk:** 2GB untuk models dan cache
+| Requirement | Minimum | Recommended |
+|-------------|---------|-------------|
+| **Python** | 3.9 | **3.10-3.12** |
+| **RAM** | 4GB | 8GB+ (untuk training) |
+| **OS** | Windows 10/11 / Linux / macOS | Windows 11 |
+| **Disk** | 1GB | 2GB+ (models + cache) |
 
-### Key Dependencies
-```
-torch>=2.10.0 | fastapi>=0.104.0 | transformers>=4.35.0 | onnxruntime>=1.16.0
-```
+### ⚠️ Important: Python Version Compatibility
+
+| Python Version | Script | Status | Notes |
+|---------------|--------|--------|-------|
+| 3.10 - 3.12 | `fix_dependencies.bat` | ✅ **Recommended** | Paling stabil, semua packages tersedia |
+| 3.13 | `fix_dependencies.bat` | ✅ Supported | Beberapa packages perlu build dari source |
+| 3.14 | `quick_install.bat` | ⚠️ Experimental | Gunakan latest package versions |
 
 ### Installation Methods
 
-**Standard Install (Python 3.10-3.12):**
 ```bash
+# Method 1: Standard Install (Python 3.10-3.12) ✅ RECOMMENDED
 .\fix_dependencies.bat
-```
 
-**Quick Install (Python 3.14 compatible):**
-```bash
+# Method 2: Quick Install (Python 3.13-3.14)
 .\quick_install.bat
+
+# Method 3: Manual Install (jika script gagal)
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+pip install fastapi uvicorn python-multipart transformers
+pip install librosa soundfile pydub numpy pandas scikit-learn
 ```
 
 ---
 
-## 🎯 Features
+## � What's New in v3.2
 
-### Core Pipeline (v3.0)
-- **Integrated Pipeline:** 5-step workflow (Upload → Preprocess → Train → Results → Predict)
-- **Multi-Backbone:** HeAR, Wav2Vec 2.0, XLS-R, HuBERT
-- **Real-time Training:** Live logs and visualization
-- **Model Management:** Save, compare, and load models
-- **Interactive UI:** Drag & drop, charts, model cards
+### Phase 2: Production Features ⭐ NEW
+| Feature | Description | Speedup |
+|---------|-------------|---------|
+| **Async I/O** | Non-blocking file operations & preprocessing | 2-3x throughput |
+| **Task Queue** | Background job scheduling dengan priority | Non-blocking API |
+| **ONNX Inference** | Optimized inference dengan ONNX Runtime | **2-3x faster** |
+| **Model Versioning** | Dev → Staging → Production workflow | - |
+| **A/B Testing** | Statistical model comparison | - |
 
 ### Phase 1: Performance Optimizations
-- **Batch Training:** 10-20x faster training dengan DataLoader (batch_size up to 64)
-- **Feature Caching:** Persistent cache untuk pre-extracted features
-- **SQLite Persistence:** State durability dan history tracking
+| Feature | Description | Speedup |
+|---------|-------------|---------|
+| **Batch Training** | DataLoader dengan batch_size up to 64 | **10-20x** |
+| **Feature Caching** | Persistent cache pre-extracted features | ~5x repeated training |
+| **SQLite Persistence** | State durability & history tracking | - |
 
-### Phase 2: Production Features
-- **Async I/O:** Non-blocking file operations dan preprocessing
-- **Task Queue:** Background job scheduling dengan priority
-- **ONNX Inference:** 2-3x faster inference dengan ONNX Runtime
-- **Model Versioning:** Dev → Staging → Production workflow
-- **A/B Testing:** Statistical model comparison dengan traffic allocation
+### Core Pipeline (v3.0)
+- ✅ **Integrated Pipeline:** Upload → Preprocess → Train → Visualize → Predict
+- ✅ **Multi-Backbone:** HeAR, Wav2Vec 2.0, XLS-R, HuBERT
+- ✅ **Real-time Training:** Live logs & visualization
+- ✅ **Interactive UI:** Drag & drop, charts, model cards
 
 ---
 
@@ -90,62 +113,98 @@ cough_001.wav,P001,35,L,1,14,1,...
 
 ## 🔧 Troubleshooting
 
-### Python Not Found / Build Errors
+### 🚨 Quick Fixes (Masalah Umum)
 
-**Problem:** `The system cannot find the file python.exe`
+```bash
+# Masalah: Module not found / Import error
+rmdir /s /q venv
+.\fix_dependencies.bat    # atau .\quick_install.bat untuk Python 3.14
 
-**Solutions:**
+# Masalah: Python not found
+.\check_python.bat        # Diagnose Python installation
 
-1. **Check Python Installation:**
+# Masalah: SQLite locked / Database error
+del data\pipeline.db      # Reset database (WARNING: data akan hilang)
+
+# Masalah: Cache corrupted
+rmdir /s /q data\feature_cache    # Clear feature cache
+```
+
+### ⚠️ Python Installation Issues
+
+#### Error: `python.exe not found` atau `Python was not found`
+
+**Penyebab:** Python tidak terinstall atau tidak di PATH
+
+**Solusi:**
+
+1. **Diagnose dulu:**
    ```batch
    .\check_python.bat
    ```
 
-2. **Install Python (jika belum):**
-   - Download dari https://www.python.org/downloads/
-   - Pilih Python **3.10, 3.11, atau 3.12** (recommended)
-   - **Centang "Add Python to PATH"** saat installasi
-   - Restart terminal setelah install
+2. **Install Python 3.10-3.12 (Recommended):**
+   - Download: https://www.python.org/downloads/
+   - ⚠️ **Centang "Add Python to PATH"** saat installasi
+   - Restart terminal/command prompt
 
-3. **Gunakan py launcher (alternatif):**
-   - Ganti semua `python` dengan `py` di batch files
-   - Atau jalankan: `py -m venv venv`
-
-### Python 3.14 Compatibility Issues
-
-**Problem:** `Could not find a version that satisfies the requirement torch==2.6.0`
-
-**Cause:** Python 3.14 terlalu baru, beberapa packages belum ada pre-built wheels.
-
-**Solutions:**
-
-1. **Gunakan Quick Install (recommended untuk Python 3.14):**
+3. **Alternatif - Gunakan py launcher:**
    ```batch
-   rmdir /s /q venv  :: Hapus venv yang corrupted
-   .\quick_install.bat
+   py -m venv venv
+   venv\Scripts\activate
+   pip install -r requirements.txt
    ```
 
-2. **Atau downgrade ke Python 3.11/3.12:**
-   - Uninstall Python 3.14
-   - Install Python 3.11 atau 3.12 dari python.org
-   - Jalankan ulang `fix_dependencies.bat`
+### ⚠️ Python 3.14 Specific Issues
 
-3. **Manual install dengan versions fleksibel:**
-   ```batch
-   pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
-   pip install fastapi uvicorn transformers librosa numpy pandas
-   ```
+#### Error: `Could not find a version that satisfies the requirement torch==2.6.0`
 
-### Other Issues
+**Penyebab:** Python 3.14 terlalu baru, beberapa packages belum ada pre-built wheels
 
-| Issue | Solution |
-|-------|----------|
-| `torch not found` | Run `.\fix_dependencies.bat` |
-| `uvicorn error` | Delete `venv/` folder, run fix script |
-| PowerShell error | Use `.\script.bat` (with `.\`) |
-| `ImportError: cannot import name 'ONNX_AVAILABLE'` | Install ONNX: `pip install onnx onnxruntime` |
-| SQLite locked | Restart server, check `data/pipeline.db` permissions |
-| Cache corrupted | Delete `data/feature_cache/` folder |
+**Solusi untuk Python 3.14:**
+
+```batch
+# Method 1: Gunakan Quick Install (Recommended)
+rmdir /s /q venv
+.\quick_install.bat
+
+# Method 2: Downgrade ke Python 3.11/3.12 (Paling Stabil)
+# 1. Uninstall Python 3.14 dari Control Panel
+# 2. Install Python 3.11 atau 3.12 dari python.org
+# 3. Jalankan: .\fix_dependencies.bat
+
+# Method 3: Manual Install dengan versi fleksibel
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+pip install fastapi uvicorn transformers librosa numpy pandas scikit-learn
+```
+
+### 🔍 Common Error Messages
+
+| Error Message | Penyebab | Solusi |
+|---------------|----------|--------|
+| `No module named 'uvicorn'` | Dependencies tidak lengkap | Hapus `venv/`, jalankan script install ulang |
+| `No module named 'torch'` | PyTorch tidak terinstall | Jalankan `fix_dependencies.bat` |
+| `No module named 'transformers'` | Transformers tidak terinstall | `pip install transformers` |
+| `No module named 'aiofiles'` | Phase 2 dependency kurang | `pip install aiofiles` |
+| `ImportError: cannot import name 'ONNX_AVAILABLE'` | ONNX opsional tidak terinstall | `pip install onnx onnxruntime` |
+| `SQLite locked` | Database sedang digunakan | Restart server, hapus `data/pipeline.db` jika persist |
+| `ModuleNotFoundError: webrtcvad` | VAD library gagal install | Aplikasi tetap jalan dengan energy-based fallback |
+
+### 🔧 Diagnostic Commands
+
+```bash
+# Test apakah semua dependencies terinstall dengan benar
+python test_build.py
+
+# Check Python version
+python --version
+
+# List installed packages
+pip list
+
+# Check virtual environment
+venv\Scripts\python --version
+```
 
 ---
 
@@ -245,10 +304,42 @@ TB-DETECTOR/
 
 ---
 
-**TB DETECTOR v3.2.0** | Python 3.9+ | [http://localhost:8000](http://localhost:8000)
-├── Phase 1: ✅ Performance (Batch Training, Caching, Persistence)
-├── Phase 2: ✅ Production (Async, Task Queue, ONNX, Versioning, A/B Testing)
-└── API Docs: /docs (auto-generated)
+## 💻 Development Info
+
+### Helper Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `start_v3.bat` | Start server dengan auto-reload |
+| `fix_dependencies.bat` | Standard install untuk Python 3.10-3.12 |
+| `quick_install.bat` | Quick install untuk Python 3.13-3.14 |
+| `check_python.bat` | Diagnose Python installation |
+| `test_build.py` | Test semua imports |
+
+### File Structure Key Files
+
+```
+app/
+├── main_v3.py              # FastAPI entry point
+├── model_manager.py        # Model lifecycle management
+├── persistence.py          # SQLite database operations
+├── async_utils.py          # Async I/O utilities (Phase 2)
+├── task_queue.py           # Background task queue (Phase 2)
+├── onnx_inference.py       # ONNX runtime inference (Phase 2)
+├── model_versioning.py     # Model registry (Phase 2)
+├── ab_testing.py           # A/B testing framework (Phase 2)
+└── training/               # Training modules
+    ├── batch_trainer.py    # Batch training (Phase 1)
+    └── cache_manager.py    # Feature caching (Phase 1)
+```
+
+---
+
+**TB DETECTOR v3.2.0** | Python 3.9-3.14 | [http://localhost:8000](http://localhost:8000)
+
+**Features:**
+- ✅ Phase 1: Performance (Batch Training, Caching, Persistence)
+- ✅ Phase 2: Production (Async I/O, Task Queue, ONNX, Versioning, A/B Testing)
 
 ## 🧪 Testing
 
@@ -293,5 +384,16 @@ python -c "from app.model_manager import get_model_manager; print('OK')"
 
 ---
 
-**TB DETECTOR v3** - Production-ready TB Detection System | Integrated AI Pipeline
-**Version:** 3.2.0 | **Status:** Stable | **Last Updated:** April 2026
+---
+
+<div align="center">
+
+**TB DETECTOR v3.2** - Production-ready TB Detection System
+
+[![Version](https://img.shields.io/badge/Version-3.2.0-blue)]()
+[![Status](https://img.shields.io/badge/Status-Stable-brightgreen)]()
+[![Last Updated](https://img.shields.io/badge/Last%20Updated-April%202026-orange)]()
+
+*Integrated AI Pipeline for Tuberculosis Detection via Audio Recognition*
+
+</div>
